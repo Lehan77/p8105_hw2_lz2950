@@ -1,0 +1,172 @@
+---
+title: "p8105_hw2_lz2950"
+author: "Lehan Zou"
+date: "2023-10-01"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+```
+
+```{r}
+month_df = 
+  tibble(
+    month_num = 1:12,
+    month_abb = month.abb,
+    month = month.name
+  )
+
+pols = 
+  read.csv("~/Desktop/DS/P8105_HW2/data/fivethirtyeight_datasets/pols-month.csv") |>
+  separate(mon, into = c("year", "month_num", "day"), convert = TRUE) |>
+  mutate(
+    president = recode(prez_gop, "0" = "dem", "1" = "gop", "2" = "gop")) |>
+  left_join(x = _, y = month_df) |> 
+  select(year, month, everything(), -day, -starts_with("prez")) 
+```
+
+```{r}
+#read csv file
+snp <- read.csv("~/Desktop/DS/P8105_HW2/data/fivethirtyeight_datasets/snp.csv") |>
+  separate(date, into = c("month", "day", "year"), convert = TRUE) |>
+  mutate(year = ifelse(year>=50, 1900+year, 2000+year), )|>
+  arrange(year, month) |>
+  mutate(month = month.name[month]) |>
+  select(year, month, close) 
+```
+
+```{r}
+unemployment = 
+  read_csv("~/Desktop/DS/P8105_HW2/data/fivethirtyeight_datasets/unemployment.csv") |>
+  rename(year = Year) |>
+  pivot_longer(
+    Jan:Dec, 
+    names_to = "month_abb",
+    values_to = "unemployment"
+  ) |> 
+  left_join(x = _, y = month_df) |> 
+  select(year, month, unemployment)
+```
+Now we merge the three datasets!
+
+```{r merge_538}
+data_538 = 
+  left_join(pols, snp) |>
+  left_join(x = _, y = unemployment)
+
+str(data_538)
+```
+
+### Problem 2
+```{r}
+#read csv file
+Mr_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = cell_cols("A:N"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
+  # use reasonable variable names
+  janitor::clean_names() |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  mutate(homes_powered = weight_tons * (500 / 30),
+         year = as.numeric(year), 
+         name = "Mr Trash Wheel") 
+
+```
+
+```{r}
+prof_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A:M")) |>
+  # use reasonable variable names
+  janitor::clean_names() |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  mutate(homes_powered = weight_tons * (500 / 30),
+         name = "Professor Trash Wheel") 
+```
+
+```{r}
+gwy_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A:K"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
+  # use reasonable variable names
+  janitor::clean_names() |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  mutate(homes_powered = weight_tons * (500 / 30),
+         name = "Gwynnda Trash Wheel") 
+```
+
+Then we can combine those three data set.
+```{r}
+trash_wheel <-
+  Mr_trash_wheel |> 
+  full_join(prof_trash_wheel) |> 
+  full_join(gwy_trash_wheel) |> 
+  relocate(name)
+```
+The cleaned "Mr. Trash Wheel" data set has `r nrow(Mr_trash_wheel)` observations of `r ncol(Mr_trash_wheel)` variables and tells us about the trash collected by trash wheel from `r paste(Mr_trash_wheel$month[1], min(Mr_trash_wheel$year), sep = ", ")` to `r paste(Mr_trash_wheel$month[nrow(Mr_trash_wheel)], max(Mr_trash_wheel$year), sep = ", ")`. The cleaned "Professor Trash Wheel" data set contains `r nrow(prof_trash_wheel)` observations of `r ncol(prof_trash_wheel)` variables from `r paste(prof_trash_wheel$month[1], min(prof_trash_wheel$year), sep = ", ")` to `r paste(prof_trash_wheel$month[nrow(prof_trash_wheel)], max(prof_trash_wheel$year), sep = ", ")`. The cleaned "Gwynnda Trash Wheel" data set contains `r nrow(gwy_trash_wheel)` observations of `r ncol(gwy_trash_wheel)` variables from `r paste(gwy_trash_wheel$month[1], min(gwy_trash_wheel$year), sep = ", ")` to `r paste(gwy_trash_wheel$month[nrow(gwy_trash_wheel)], max(gwy_trash_wheel$year), sep = ", ")`.  
+For the combined dataset, it contains `r nrow(trash_wheel)` observations of `r ncol(trash_wheel)` variables, among which the `name` variable marks the trash wheel's name (`r unique(trash_wheel$name)`). 
+The total weight of trash collected by Professor Trash Wheel is `r sum(prof_trash_wheel$weight_tons)` and the total number of cigarette butts collected by Gwynnda in July of 2021 is `r gwy_trash_wheel |> filter(year == 2021 & month == "July") |> pull(cigarette_butts) |> sum()`.
+
+### Problem 3
+```{r}
+#read csv file
+mci_baseline <-
+  read_csv("data/data_mci/MCI_baseline.csv", skip = 1) |>
+  janitor::clean_names() |>
+  mutate(
+    #recode sex and apoe4 to non-numeric variables
+    sex = recode(sex,
+                 "1" = "Male",
+                 "0" = "Female"),
+    apoe4 = recode(apoe4,
+                   "1" = "Carrier",
+                   "0" = "Non-carrier")) |>
+  #remove participants who do not meet the stated inclusion criteria
+  filter(age_at_onset == "."|current_age < age_at_onset )
+
+```
+For the data cleaning, first I skipped the first row which contains notes for the columns. I used recode() function to convert the numerical values of `sex` and `apoe4` to their actual meaning. Lastly, I remove participants who do not meet the stated inclusion criteria by selecting the `current_age` variable smaller than `age_at_onset` variable. After cleaning, the data set contains  `r nrow(mci_baseline)` observations of `r ncol(mci_baseline)` variables.  
+
+From the data set, it could be concluded that `r nrow(read_csv("data/data_mci/MCI_baseline.csv", skip = 1))` participants in total were recruited, and `r nrow(mci_baseline)` participants met the criteria, `r sum(is.na(mci_baseline$age_at_onset)!=1)` develop MCI. The average baseline age is `r mean(mci_baseline$current_age)`, and `r sum(mci_baseline$sex == "Female" & mci_baseline$apoe4 == "Carrier") / sum(mci_baseline$sex == "Female") * 100`% of women in the study are APOE4 carriers.  
+
+
+Next, I'm going to import the data set of longitudinally observed bionnarker values.
+```{r}
+#read amyloid csv file
+amyloid <-
+  read_csv("data/data_mci/mci_amyloid.csv", skip = 1) |>
+  janitor::clean_names() |>
+  rename(id = study_id) |>
+  pivot_longer(baseline:time_8,
+               names_prefix="time_",
+               names_to="years_since_diagnosed",
+               values_to="amyloid_ratio") |>
+               #change baseline to 0 and convert amyloid ratio to numerical variable
+               mutate(
+    years_since_diagnosed =
+      replace(years_since_diagnosed,years_since_diagnosed == "baseline",0),
+    amyloid_ratio = as.numeric(amyloid_ratio) 
+  )
+
+amyloid
+```
+For the data set mci_amyloid, first I read in csv file and skip the first line, input only data entries along with variable names. Then I used `clean_names()` to make sure the names are unique and consistent. Also I renamed variable "study_id" to "id". Then I use "pivot_longer" to change the original data from horizontal to vertical with the variable (baseline:times_8) becomes "years_since_diagnosed". 
+Moreover, I renamed baseline to 0 and changed "amyloid_ratio" to numeric variable.
+After cleaning, There are `r nrow(amyloid)` observations of `r ncol(amyloid)` variables.
+
+```{r}
+#use anti_join() function to find unmatched cases
+
+unmatched_baseline = anti_join(mci_baseline, amyloid, by = "id")
+
+unmatched_amyloid = anti_join(amyloid, mci_baseline, by = "id")
+
+```
+There are `r nrow(unmatched_baseline)` for participants appear only in baseline data set and `r nrow(unmatched_amyloid)/5` appear only in amyloid data set.
+
+```{r}
+mci_combined <-
+  inner_join(mci_baseline, amyloid, by= "id")
+#write data to a csv file  
+write_csv(mci_combined, "data/data_mci/mci_combined.csv")
+```
+There are `r nrow(mci_combined)/5` participants appear in both dataset, each participants have 5 rows data. So total `r nrow(mci_combined)` in the combined dataset. 
