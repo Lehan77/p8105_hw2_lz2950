@@ -63,34 +63,34 @@ str(data_538)
 ### Problem 2
 ```{r}
 #read csv file
-Mr_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = cell_cols("A:N"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
+Mr_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = cell_cols("A2:N586"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
   # use reasonable variable names
   janitor::clean_names() |>
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
-  mutate(homes_powered = weight_tons * (500 / 30),
+  mutate(homes_powered = weight_tons * 500 / 30,
          year = as.numeric(year), 
          name = "Mr Trash Wheel") 
 
 ```
 
 ```{r}
-prof_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A:M")) |>
+prof_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A2:M108")) |>
   # use reasonable variable names
   janitor::clean_names() |>
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
-  mutate(homes_powered = weight_tons * (500 / 30),
+  mutate(homes_powered = weight_tons * 500 / 30,
          name = "Professor Trash Wheel") 
 ```
 
 ```{r}
-gwy_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A:K"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
+gwy_trash_wheel <- read_excel("data/Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = cell_cols("A2:L157"), col_names = TRUE, trim_ws = TRUE, skip = 1) |>
   # use reasonable variable names
   janitor::clean_names() |>
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
-  mutate(homes_powered = weight_tons * (500 / 30),
+  mutate(homes_powered = weight_tons * 500 / 30,
          name = "Gwynnda Trash Wheel") 
 ```
 
@@ -102,9 +102,14 @@ trash_wheel <-
   full_join(gwy_trash_wheel) |> 
   relocate(name)
 ```
+
 The cleaned "Mr. Trash Wheel" data set has `r nrow(Mr_trash_wheel)` observations of `r ncol(Mr_trash_wheel)` variables and tells us about the trash collected by trash wheel from `r paste(Mr_trash_wheel$month[1], min(Mr_trash_wheel$year), sep = ", ")` to `r paste(Mr_trash_wheel$month[nrow(Mr_trash_wheel)], max(Mr_trash_wheel$year), sep = ", ")`. The cleaned "Professor Trash Wheel" data set contains `r nrow(prof_trash_wheel)` observations of `r ncol(prof_trash_wheel)` variables from `r paste(prof_trash_wheel$month[1], min(prof_trash_wheel$year), sep = ", ")` to `r paste(prof_trash_wheel$month[nrow(prof_trash_wheel)], max(prof_trash_wheel$year), sep = ", ")`. The cleaned "Gwynnda Trash Wheel" data set contains `r nrow(gwy_trash_wheel)` observations of `r ncol(gwy_trash_wheel)` variables from `r paste(gwy_trash_wheel$month[1], min(gwy_trash_wheel$year), sep = ", ")` to `r paste(gwy_trash_wheel$month[nrow(gwy_trash_wheel)], max(gwy_trash_wheel$year), sep = ", ")`.  
 For the combined dataset, it contains `r nrow(trash_wheel)` observations of `r ncol(trash_wheel)` variables, among which the `name` variable marks the trash wheel's name (`r unique(trash_wheel$name)`). 
-The total weight of trash collected by Professor Trash Wheel is `r sum(prof_trash_wheel$weight_tons)` and the total number of cigarette butts collected by Gwynnda in July of 2021 is `r gwy_trash_wheel |> filter(year == 2021 & month == "July") |> pull(cigarette_butts) |> sum()`.
+```{r}
+professor_sum_weight = sum(pull(prof_trash_wheel, weight_tons))
+gwy_ciga_butts = gwy_trash_wheel |> filter(year == 2021 & month == "July") |> pull(cigarette_butts) |> sum()
+```
+The total weight of trash collected by Professor Trash Wheel is `r professor_sum_weight` and the total number of cigarette butts collected by Gwynnda in July of 2021 is `r gwy_ciga_butts`.
 
 ### Problem 3
 ```{r}
